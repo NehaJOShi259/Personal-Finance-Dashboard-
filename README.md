@@ -1,29 +1,41 @@
-# Personal-Finance-Dashboard-
+# Personal Finance Dashboard (Python Streamlit)
 
-# Personal Finance Dashboard
+This is a simple and interactive personal finance dashboard built in Python using Streamlit.  
+It allows you to:
 
-An interactive **Streamlit dashboard** for managing and visualizing personal finances. Users can track income and expenses, view summaries, and analyze spending trends through charts.
+- Add transactions with **Date, Category, Type (Income/Expense), and Amount**  
+- View a **table of all transactions**  
+- See **summary metrics**: Total Income, Total Expenses, Balance  
+- Visualize data with **bar chart, pie chart, and line chart**  
+- Download all transactions as a CSV file  
 
----
+🚀 Features
 
-## Features
-- Add income and expense transactions.
-- View a transaction table.
-- See total income, total expenses, and balance.
-- Interactive charts: expenses by category and income vs expenses over time.
+- Add / View Transactions  
+- Summary Metrics  
+- Bar Chart & Pie Chart for Expenses  
+- Line Chart: Income vs Expenses Over Time  
+- Persistent CSV storage  
 
----
+📦 Technologies Used
 
-## Technologies Used
-- Python 3.x
-- Streamlit
-- Pandas
-- Matplotlib
+- Python 3.x  
+- Streamlit  
+- Pandas  
+- Matplotlib  
 
----
+🧪 Live Demo
 
-## How to Run Locally
-1. Clone the repository:
+[View Live Dashboard](https://nehajoshi259-personal-finance-dashboar-finance-dashboard-u2wtzy.streamlit.app/)
+
+📄 How to Run Locally
+
+Clone the repository:
+
 ```bash
-git clone https://github.com/your-username/finance-dashboard.git
+git clone https://github.com/NehaJOShi259/finance-dashboard.git
 cd finance-dashboard
+
+python -m pip install -r requirements.txt
+
+python -m streamlit run finance_dashboard.py
