@@ -30,9 +30,11 @@ if st.sidebar.button("Add Transaction"):
 data = st.session_state.data
 
 if not data.empty:
+    # Transaction Table
     st.subheader("📊 Transaction Table")
     st.dataframe(data.sort_values(by="Date", ascending=False))
 
+    # Summary Metrics
     st.subheader("💵 Summary")
     income_total = data.loc[data["Type"]=="Income", "Amount"].sum()
     expense_total = data.loc[data["Type"]=="Expense", "Amount"].sum()
@@ -42,19 +44,35 @@ if not data.empty:
     st.metric("Total Expenses", f"${expense_total:,.2f}")
     st.metric("Balance", f"${balance:,.2f}")
 
-    # --- Charts ---
-    st.subheader("📈 Expenses by Category")
+    # Charts
     expenses = data[data["Type"]=="Expense"].groupby("Category")["Amount"].sum().sort_values(ascending=False)
-    if not expenses.empty:
-        fig, ax = plt.subplots()
-        expenses.plot(kind="bar", ax=ax)
-        ax.set_ylabel("Amount ($)")
-        ax.set_title("Expenses by Category")
-        st.pyplot(fig)
 
+    col1, col2 = st.columns(2)
+
+    # Bar Chart
+    with col1:
+        st.subheader("Expenses by Category (Bar Chart)")
+        if not expenses.empty:
+            fig, ax = plt.subplots()
+            expenses.plot(kind="bar", ax=ax)
+            ax.set_ylabel("Amount ($)")
+            ax.set_title("Expenses by Category")
+            st.pyplot(fig)
+
+    # Pie Chart
+    with col2:
+        st.subheader("Expenses by Category (Pie Chart)")
+        if not expenses.empty:
+            fig2, ax2 = plt.subplots()
+            ax2.pie(expenses, labels=expenses.index, autopct='%1.1f%%', startangle=90)
+            ax2.set_title("Expense Distribution by Category")
+            st.pyplot(fig2)
+
+    # Line Chart: Income vs Expenses over time
     st.subheader("💡 Income vs Expenses Over Time")
     timeline = data.groupby(["Date", "Type"])["Amount"].sum().unstack(fill_value=0)
     if not timeline.empty:
         st.line_chart(timeline)
+
 else:
     st.info("No transactions yet. Add some using the sidebar!")
