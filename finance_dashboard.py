@@ -23,7 +23,7 @@ if "data" not in st.session_state:
 # --- Sidebar for user input ---
 st.sidebar.header("Add Transaction")
 transaction_type = st.sidebar.selectbox("Transaction Type", ["Income", "Expense"])
-category = st.sidebar.text_input("Category (e.g., Rent, Salary)")
+category = st.sidebar.text_input("Category (e.g., Salary, Rent, Grocery)")
 amount = st.sidebar.number_input("Amount", min_value=0.0, step=0.01)
 date = st.sidebar.date_input("Date")
 
@@ -45,15 +45,15 @@ if not data.empty:
 
     # Summary Metrics
     st.subheader("💵 Summary")
-    income_total = data.loc[data["Type"]=="Income", "Amount"].sum()
-    expense_total = data.loc[data["Type"]=="Expense", "Amount"].sum()
-    balance = income_total - expense_total
+    total_income = data.loc[data["Type"]=="Income", "Amount"].sum()
+    total_expense = data.loc[data["Type"]=="Expense", "Amount"].sum()
+    balance = total_income - total_expense
 
-    st.metric("Total Income", f"${income_total:,.2f}")
-    st.metric("Total Expenses", f"${expense_total:,.2f}")
+    st.metric("Total Income", f"${total_income:,.2f}")
+    st.metric("Total Expenses", f"${total_expense:,.2f}")
     st.metric("Balance", f"${balance:,.2f}")
 
-    # Expenses data for charts
+    # Expenses by category for charts
     expenses = data[data["Type"]=="Expense"].groupby("Category")["Amount"].sum().sort_values(ascending=False)
 
     col1, col2 = st.columns(2)
