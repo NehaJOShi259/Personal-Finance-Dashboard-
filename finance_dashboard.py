@@ -126,3 +126,4 @@ data=st.session_state.data.to_csv(index=False),
 file_name="expenses.csv",
 mime="text/csv",
 )
+
