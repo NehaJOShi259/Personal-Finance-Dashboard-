@@ -1,84 +1,138 @@
-import streamlit as st
-import pandas as pd
-from datetime import date
+import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-st.set_page_config(page_title="Expense Tracker", layout="wide")
+export default function BudgetTracker() {
+  const [budget, setBudget] = useState('');
+  const [balance, setBalance] = useState(0);
+  const [income, setIncome] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [type, setType] = useState('Expense');
+  const [category, setCategory] = useState('');
+  const [amount, setAmount] = useState('');
 
-DATA_FILE = "expense_data.csv"
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A'];
 
-def load_data():
-    try:
-        df = pd.read_csv(DATA_FILE, parse_dates=["Date"])
-        return df
-    except FileNotFoundError:
-        return pd.DataFrame(columns=["Date", "Category", "Amount", "Description"])
+  const handleSetBudget = () => {
+    if (!budget || budget <= 0) return alert('Please enter a valid budget');
+    setBalance(parseFloat(budget));
+  };
 
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False)
+  const handleAdd = () => {
+    const amt = parseFloat(amount);
+    if (!category || amt <= 0) return alert('Enter valid details');
 
-st.title("Personal Expense Tracker")
+    if (type === 'Expense') {
+      if (amt > balance) return alert('Not enough balance!');
+      const updated = [...expenses, { category, amount: amt }];
+      setExpenses(updated);
+      setBalance(balance - amt);
+    } else {
+      const updated = [...income, { category, amount: amt }];
+      setIncome(updated);
+      setBalance(balance + amt);
+    }
 
-if "data" not in st.session_state:
-    st.session_state.data = load_data()
+    setCategory('');
+    setAmount('');
+  };
 
-st.sidebar.header("Add New Expense")
-transaction_date = st.sidebar.date_input("Date", value=date.today())
-category = st.sidebar.selectbox(
-    "Category",
-    ["Food", "Travel", "Shopping", "Health", "Bills", "Entertainment", "Other"]
-)
-amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=1.0)
-description = st.sidebar.text_input("Description")
+  const totalIncome = income.reduce((a, b) => a + b.amount, 0);
+  const totalExpense = expenses.reduce((a, b) => a + b.amount, 0);
 
-if st.sidebar.button("Add Expense"):
-    if amount <= 0 or category == "":
-        st.sidebar.error("Please enter valid details before submitting.")
-    else:
-        new_entry = pd.DataFrame(
-            [[transaction_date, category, amount, description]],
-            columns=["Date", "Category", "Amount", "Description"]
-        )
-        st.session_state.data = pd.concat([st.session_state.data, new_entry], ignore_index=True)
-        save_data(st.session_state.data)
-        st.sidebar.success("Expense added successfully!")
+  return (
+    <div className="p-6 flex flex-col items-center space-y-6 bg-gray-100 min-h-screen">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardContent className="space-y-4 p-6">
+          <h1 className="text-2xl font-bold text-center">💰 Smart Budget Tracker</h1>
 
-st.subheader("Expense List")
+          {!balance ? (
+            <div className="space-y-3">
+              <Input
+                type="number"
+                placeholder="Enter total budget"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+              />
+              <Button className="w-full" onClick={handleSetBudget}>Set Budget</Button>
+            </div>
+          ) : (
+            <>
+              <div className="text-center">
+                <p className="text-lg font-semibold">Total Budget: ₹{budget}</p>
+                <p className={`text-lg font-bold ${balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  Remaining Balance: ₹{balance}
+                </p>
+              </div>
 
-if not st.session_state.data.empty:
-    for i, row in st.session_state.data.iterrows():
-        cols = st.columns([1, 1, 1, 2, 0.5])
-        cols[0].write(str(row["Date"])[:10])
-        cols[1].write(row["Category"])
-        cols[2].write(f"₹{row['Amount']:.2f}")
-        cols[3].write(row["Description"] if row["Description"] else "-")
-        if cols[4].button("Delete", key=f"del_{i}"):
-            st.session_state.data.drop(i, inplace=True)
-            st.session_state.data.reset_index(drop=True, inplace=True)
-            save_data(st.session_state.data)
-            st.rerun()
-else:
-    st.info("No expenses recorded yet.")
+              <div className="space-y-3">
+                <select
+                  className="w-full p-2 border rounded"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                >
+                  <option>Expense</option>
+                  <option>Income</option>
+                </select>
 
-st.subheader("Budget Summary")
-budget = st.number_input("Enter your total budget (₹)", min_value=0.0, step=500.0)
+                <Input
+                  type="text"
+                  placeholder="Category (e.g. Food, Rent, Salary)"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                />
 
-if not st.session_state.data.empty and budget > 0:
-    total_spent = st.session_state.data["Amount"].sum()
-    balance = budget - total_spent
+                <Input
+                  type="number"
+                  placeholder="Amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
 
-    st.write(f"**Total Spent:** ₹{total_spent:.2f}")
-    st.write(f"**Remaining Balance:** ₹{balance:.2f}")
+                <Button className="w-full" onClick={handleAdd}>Add {type}</Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-    if total_spent > budget:
-        st.error("Budget exceeded! Try to cut down expenses.")
-    else:
-        st.success("You are within budget.")
+      {(expenses.length > 0 || income.length > 0) && (
+        <div className="w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-6">
+          {expenses.length > 0 && (
+            <Card className="shadow-md">
+              <CardContent className="p-4">
+                <h2 className="text-lg font-bold text-center">Expense Breakdown</h2>
+                <PieChart width={300} height={250}>
+                  <Pie data={expenses} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={80}>
+                    {expenses.map((_, index) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </CardContent>
+            </Card>
+          )}
 
-    st.bar_chart(pd.DataFrame({"Spent": [total_spent], "Remaining": [balance]}).T)
-
-st.download_button(
-    label="Download Expenses CSV",
-    data=st.session_state.data.to_csv(index=False),
-    file_name="expenses.csv",
-    mime="text/csv",
-)
+          <Card className="shadow-md">
+            <CardContent className="p-4">
+              <h2 className="text-lg font-bold text-center">Income vs Expense</h2>
+              <BarChart width={300} height={250} data={[{ name: 'Total', Income: totalIncome, Expense: totalExpense }]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Income" fill="#00C49F" />
+                <Bar dataKey="Expense" fill="#FF8042" />
+              </BarChart>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
