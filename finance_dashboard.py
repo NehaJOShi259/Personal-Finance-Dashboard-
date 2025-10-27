@@ -1,101 +1,190 @@
 import streamlit as st
+import json
+from datetime import date
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import date
+import os
 
 st.set_page_config(page_title="Personal Finance Dashboard", layout="wide")
 
-DATA_FILE = "finance_data.csv"
+DATA_FILE = "finance_data.json"
 
 def load_data():
-    try:
-        df = pd.read_csv(DATA_FILE, parse_dates=["Date"])
-        return df
-    except FileNotFoundError:
-        return pd.DataFrame(columns=["Date", "Type", "Category", "Amount", "Description"])
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    return {"budget": None, "transactions": []}
 
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False)
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)
 
-if "data" not in st.session_state:
-    st.session_state.data = load_data()
+def compute_totals(transactions):
+    income = sum(t["amount"] for t in transactions if t["type"] == "Income")
+    expense = sum(t["amount"] for t in transactions if t["type"] == "Expense")
+    return income, expense, income - expense
+
+data = load_data()
+if "pending" not in st.session_state:
+    st.session_state.pending = None
 
 st.title("Personal Finance Dashboard")
 
-st.header("Add Transaction")
-col1, col2, col3 = st.columns(3)
-with col1:
-    t_type = st.radio("Type", ["Income", "Expense"], horizontal=True)
-with col2:
-    t_date = st.date_input("Date", value=date.today())
-with col3:
-    category = st.text_input("Category (e.g. Salary, Rent, Food)")
-
-amount = st.number_input("Amount (₹)", min_value=0.0, step=100.0)
-description = st.text_area("Description (optional)")
-
-if st.button("Add Transaction"):
-    total_income = st.session_state.data[st.session_state.data["Type"] == "Income"]["Amount"].sum()
-    total_expense = st.session_state.data[st.session_state.data["Type"] == "Expense"]["Amount"].sum()
-    balance = total_income - total_expense
-
-    if t_type == "Expense" and amount > balance:
-        st.error("Expense exceeds available balance. Please add income first.")
-    elif amount <= 0 or category.strip() == "":
-        st.warning("Please enter valid details.")
+with st.sidebar:
+    st.header("Budget Setup")
+    if data.get("budget") is None:
+        entered_budget = st.number_input("Set your budget (₹)", min_value=0.0, step=500.0, format="%.2f")
+        if st.button("Save Budget"):
+            if entered_budget <= 0:
+                st.error("Budget must be greater than zero.")
+            else:
+                data["budget"] = float(entered_budget)
+                save_data(data)
+                st.success("Budget saved.")
+                st.experimental_rerun()
     else:
-        new_entry = pd.DataFrame(
-            [[t_date, t_type, category, amount, description]],
-            columns=["Date", "Type", "Category", "Amount", "Description"]
-        )
-        st.session_state.data = pd.concat([st.session_state.data, new_entry], ignore_index=True)
-        save_data(st.session_state.data)
-        st.success("Transaction added successfully!")
+        st.write(f"Current Budget: ₹{data['budget']:.2f}")
+        if st.button("Change Budget"):
+            data["budget"] = None
+            save_data(data)
+            st.experimental_rerun()
+
+st.subheader("Add Transaction")
+if data.get("budget") is None:
+    st.warning("Please set your budget first in the sidebar before adding transactions.")
+else:
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        t_type = st.selectbox("Type", ["Income", "Expense"])
+    with col2:
+        t_date = st.date_input("Date", value=date.today())
+    if t_type == "Income":
+        category = st.selectbox("Category", ["Salary", "Bonus", "Investment", "Gift", "Other"])
+        other_cat = ""
+        if category == "Other":
+            other_cat = st.text_input("Specify category")
+    else:
+        category = st.selectbox("Category", ["Food", "Rent", "Shopping", "Travel", "Health", "Bills", "Entertainment", "Other"])
+        other_cat = ""
+        if category == "Other":
+            other_cat = st.text_input("Specify category")
+    amount = st.number_input("Amount (₹)", min_value=0.0, step=100.0, format="%.2f")
+    description = st.text_area("Journal / Description (brief)")
+
+    def detect_mismatch(cat, text):
+        if not text:
+            return False
+        text_l = text.lower()
+        keywords = {
+            "Food": ["eat", "restaurant", "food", "meal", "coffee", "tea", "lunch", "dinner", "snack", "grocer", "grocery"],
+            "Shopping": ["shirt", "tshirt", "clothes", "dress", "shoe", "bag", "shopping", "bought", "purchase"],
+            "Travel": ["taxi", "uber", "cab", "bus", "train", "flight", "ticket", "trip", "travel", "journey"],
+            "Rent": ["rent", "apartment", "room", "house", "lease"],
+            "Health": ["doctor", "medicine", "clinic", "hospital", "medicine", "consultation"],
+            "Bills": ["electricity", "water", "internet", "phone", "bill", "subscription"],
+            "Entertainment": ["movie", "netflix", "game", "concert", "music"],
+            "Salary": ["salary", "pay", "payout", "income"],
+            "Investment": ["stock", "mutual", "investment", "dividend"],
+            "Gift": ["gift", "present"],
+        }
+        cat_key = cat if cat != "Other" else None
+        if cat_key and cat_key in keywords:
+            key_list = keywords[cat_key]
+            found_cat_kw = any(k in text_l for k in key_list)
+            other_keywords = [k for klist in keywords.values() for k in klist if k not in key_list]
+            found_other_kw = any(k in text_l for k in other_keywords)
+            if found_other_kw and not found_cat_kw:
+                return True
+        return False
+
+    if st.button("Add Transaction"):
+        if amount <= 0:
+            st.error("Amount must be greater than zero.")
+        else:
+            chosen_category = other_cat.strip() if (other_cat and other_cat.strip()) else category
+            income_total, expense_total, balance = compute_totals(data["transactions"])
+            remaining = data["budget"] - expense_total
+            if t_type == "Expense":
+                if amount > remaining:
+                    st.error("Expense exceeds available budget. Please add income or reduce amount.")
+                else:
+                    mismatch = detect_mismatch(chosen_category, description)
+                    pending = {"date": str(t_date), "type": t_type, "category": chosen_category, "amount": float(amount), "description": description}
+                    if mismatch:
+                        st.warning("The description content does not match the selected category. Please check.")
+                        if st.button("Confirm and Add Expense Anyway"):
+                            data["transactions"].append(pending)
+                            save_data(data)
+                            st.success("Transaction added.")
+                            st.experimental_rerun()
+                        else:
+                            st.info("Fix category or description, or confirm to proceed.")
+                    else:
+                        data["transactions"].append(pending)
+                        save_data(data)
+                        st.success("Transaction added.")
+                        st.experimental_rerun()
+            else:
+                pending = {"date": str(t_date), "type": t_type, "category": chosen_category, "amount": float(amount), "description": description}
+                mismatch = detect_mismatch(chosen_category, description)
+                if mismatch:
+                    st.warning("The description content does not match the selected category. Please check.")
+                    if st.button("Confirm and Add Income Anyway"):
+                        data["transactions"].append(pending)
+                        save_data(data)
+                        st.success("Transaction added.")
+                        st.experimental_rerun()
+                    else:
+                        st.info("Fix category or description, or confirm to proceed.")
+                else:
+                    data["transactions"].append(pending)
+                    save_data(data)
+                    st.success("Transaction added.")
+                    st.experimental_rerun()
 
 st.header("Summary")
+transactions = data.get("transactions", [])
+income_total, expense_total, current_balance = compute_totals(transactions)
+st.write(f"Budget: ₹{data['budget']:.2f}" if data.get("budget") is not None else "Budget: Not set")
 col1, col2, col3 = st.columns(3)
-total_income = st.session_state.data[st.session_state.data["Type"] == "Income"]["Amount"].sum()
-total_expense = st.session_state.data[st.session_state.data["Type"] == "Expense"]["Amount"].sum()
-balance = total_income - total_expense
+col1.metric("Total Income", f"₹{income_total:,.2f}")
+col2.metric("Total Expenses", f"₹{expense_total:,.2f}")
+col3.metric("Remaining", f"₹{(data['budget'] - expense_total) if data.get('budget') is not None else 0.0:,.2f}")
 
-col1.metric("Total Income", f"₹{total_income:,.2f}")
-col2.metric("Total Expenses", f"₹{total_expense:,.2f}")
-col3.metric("Remaining Balance", f"₹{balance:,.2f}")
+if data.get("budget") is not None:
+    used_percent = (expense_total / data["budget"]) * 100 if data["budget"] > 0 else 0
+    if used_percent >= 100:
+        st.error("Expenses have reached or exceeded your budget.")
+    elif used_percent >= 80:
+        st.warning("You have used 80% or more of your budget. Consider reducing unnecessary expenses.")
 
-st.header("Expense vs Income Chart")
+st.header("Charts")
+if transactions:
+    df = pd.DataFrame(transactions)
+    if not df.empty:
+        type_sums = df.groupby("type")["amount"].sum().reindex(["Income", "Expense"], fill_value=0)
+        fig1, ax1 = plt.subplots()
+        ax1.bar(type_sums.index, type_sums.values, color=["green", "red"])
+        ax1.set_title("Income vs Expense")
+        ax1.set_ylabel("Amount (₹)")
+        st.pyplot(fig1)
 
-if not st.session_state.data.empty:
-    col1, col2 = st.columns(2)
-    with col1:
-        fig, ax = plt.subplots()
-        chart_data = st.session_state.data.groupby("Type")["Amount"].sum()
-        ax.bar(chart_data.index, chart_data.values, color=["green", "red"])
-        ax.set_title("Income vs Expense")
-        ax.set_ylabel("Amount (₹)")
-        st.pyplot(fig)
-
-    with col2:
-        expense_data = st.session_state.data[st.session_state.data["Type"] == "Expense"]
-        if not expense_data.empty:
+        expense_df = df[df["type"] == "Expense"]
+        if not expense_df.empty:
+            cat_sums = expense_df.groupby("category")["amount"].sum()
             fig2, ax2 = plt.subplots()
-            category_data = expense_data.groupby("Category")["Amount"].sum()
-            ax2.pie(category_data, labels=category_data.index, autopct="%1.1f%%", startangle=90)
+            ax2.pie(cat_sums, labels=cat_sums.index, autopct="%1.1f%%", startangle=90)
             ax2.set_title("Spending by Category")
             st.pyplot(fig2)
-        else:
-            st.info("No expenses to display in pie chart.")
 else:
-    st.info("No transactions recorded yet.")
+    st.info("No transactions to display.")
 
 st.header("Transaction History")
-if not st.session_state.data.empty:
-    st.dataframe(st.session_state.data.sort_values(by="Date", ascending=False), use_container_width=True)
+if transactions:
+    df = pd.DataFrame(transactions)
+    df_display = df.sort_values(by="date", ascending=False)
+    st.dataframe(df_display.reset_index(drop=True))
+    csv = df_display.to_csv(index=False)
+    st.download_button("Download CSV", csv, "transactions.csv", "text/csv")
 else:
-    st.info("No transactions available.")
-
-st.download_button(
-    label="Download All Transactions (CSV)",
-    data=st.session_state.data.to_csv(index=False),
-    file_name="finance_data.csv",
-    mime="text/csv"
-)
+    st.info("No transactions recorded.")
