@@ -8,7 +8,7 @@ st.title("Personal Finance Dashboard")
 
 DATA_FILE = "transactions.csv"
 
-# --- Load existing data ---
+# --- Load or initialize data ---
 if os.path.exists(DATA_FILE):
     data = pd.read_csv(DATA_FILE, parse_dates=["Date"])
 else:
@@ -20,23 +20,36 @@ if "data" not in st.session_state:
 
 # --- Sidebar: Add Transaction ---
 st.sidebar.header("Add Transaction")
+
 transaction_type = st.sidebar.selectbox("Type", ["Income", "Expense"])
-category = st.sidebar.text_input("Category (e.g., Salary, Rent, Grocery)")
+
+# Common categories for dropdown
+common_categories = [
+    "Salary", "Bonus", "Investment",  # Income
+    "Rent", "Groceries", "Food", "Travel", "Utilities", "Shopping", "Health", "Education", "Other"
+]
+
+selected_category = st.sidebar.selectbox("Select Category", sorted(set(common_categories)))
+custom_category = st.sidebar.text_input("Or enter a custom category (optional)")
+
+category = custom_category.strip() if custom_category else selected_category
+
 amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=0.01)
 date = st.sidebar.date_input("Date")
 
 if st.sidebar.button("Add Transaction"):
-    if category.strip() == "":
-        st.sidebar.error("Please enter a category.")
+    if category == "":
+        st.sidebar.error("Please select or enter a category.")
     else:
         new_entry = {
             "Date": pd.to_datetime(date),
             "Type": transaction_type,
-            "Category": category.strip(),
+            "Category": category,
             "Amount": amount,
         }
         st.session_state.data = pd.concat(
-            [st.session_state.data, pd.DataFrame([new_entry])], ignore_index=True
+            [st.session_state.data, pd.DataFrame([new_entry])],
+            ignore_index=True,
         )
         st.session_state.data.to_csv(DATA_FILE, index=False)
         st.sidebar.success("Transaction added successfully!")
@@ -46,20 +59,17 @@ data = st.session_state.data
 
 if not data.empty:
     st.subheader("Transactions")
-    data_display = data.sort_values(by="Date", ascending=False).reset_index(drop=True)
-    st.dataframe(data_display)
 
-    # --- Delete Transaction ---
-    st.subheader("Delete a Transaction")
-    if len(data_display) > 0:
-        delete_index = st.number_input(
-            "Enter the row number to delete (starting from 0)",
-            min_value=0,
-            max_value=len(data_display) - 1,
-            step=1,
-        )
-        if st.button("Delete Selected Transaction"):
-            st.session_state.data.drop(delete_index, inplace=True)
+    # Add delete button next to each row
+    edited_data = data.sort_values(by="Date", ascending=False).reset_index(drop=True)
+    for i, row in edited_data.iterrows():
+        cols = st.columns([2, 2, 2, 2, 1])
+        cols[0].write(row["Date"].date())
+        cols[1].write(row["Type"])
+        cols[2].write(row["Category"])
+        cols[3].write(f"₹{row['Amount']:,.2f}")
+        if cols[4].button("Delete", key=f"del_{i}"):
+            st.session_state.data.drop(edited_data.index[i], inplace=True)
             st.session_state.data.to_csv(DATA_FILE, index=False)
             st.success("Transaction deleted successfully!")
             st.experimental_rerun()
@@ -74,9 +84,8 @@ if not data.empty:
     st.write(f"**Total Expenses:** ₹{total_expense:,.2f}")
     st.write(f"**Balance:** ₹{balance:,.2f}")
 
-    # --- Simple Chart ---
+    # --- Simple Expense Chart ---
     expenses = data[data["Type"] == "Expense"].groupby("Category")["Amount"].sum()
-
     if not expenses.empty:
         fig, ax = plt.subplots()
         expenses.plot(kind="bar", ax=ax, color="orange")
@@ -92,5 +101,6 @@ if not data.empty:
         file_name="transactions.csv",
         mime="text/csv",
     )
+
 else:
     st.info("No transactions yet. Add some using the sidebar.")
