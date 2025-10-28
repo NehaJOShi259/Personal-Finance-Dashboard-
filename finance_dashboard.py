@@ -20,7 +20,7 @@ st.sidebar.header("Add Transaction")
 transaction_type = st.sidebar.selectbox("Type", ["Income", "Expense"])
 
 if transaction_type == "Income":
-income_category = st.sidebar.selectbox("Source", ["Salary", "Freelancing", "Investment", "Gift", "Other"])
+    income_category = st.sidebar.selectbox("Source", ["Salary", "Freelancing", "Investment", "Gift", "Other"])
 if income_category == "Other":
 income_category = st.sidebar.text_input("Enter Income Source")
 amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
@@ -75,4 +75,5 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Total Income", f"₹{st.session_state.total_income:,.2f}")
 col2.metric("Total Expenses", f"₹{st.session_state.total_expense:,.2f}")
 col3.metric("Remaining Balance", f"₹{st.session_state.total_income - st.session_state.total_expense:,.2f}")
+
 
