@@ -12,18 +12,18 @@ st.header("Add a Transaction")
 
 transaction_type = st.selectbox("Select Transaction Type", ["Income", "Expense"])
 
+income_categories = ["Salary", "Business", "Freelance", "Other"]
+expense_categories = ["Food", "Rent", "Shopping", "Travel", "Bills", "Other"]
+
 if transaction_type == "Income":
-    income_category = st.selectbox("Select Income Category", ["Salary", "Business", "Freelance", "Other"])
-    if income_category == "Other":
-        category = st.text_input("Enter Custom Income Category")
-    else:
-        category = income_category
+    category_choice = st.selectbox("Select Income Category", income_categories)
 else:
-    expense_category = st.selectbox("Select Expense Category", ["Food", "Rent", "Shopping", "Travel", "Bills", "Other"])
-    if expense_category == "Other":
-        category = st.text_input("Enter Custom Expense Category")
-    else:
-        category = expense_category
+    category_choice = st.selectbox("Select Expense Category", expense_categories)
+
+if category_choice == "Other":
+    category = st.text_input("Enter Custom Category")
+else:
+    category = category_choice
 
 amount = st.number_input("Amount", min_value=0.0, format="%.2f")
 description = st.text_input("Description")
@@ -35,7 +35,7 @@ balance = income_total - expense_total
 
 if st.button("Add Transaction"):
     if transaction_type == "Expense" and income_total == 0:
-        st.error("Add income before recording an expense.")
+        st.error("Please add income before recording any expense.")
     elif transaction_type == "Expense" and amount > balance:
         st.error("Insufficient balance. You cannot spend more than your available amount.")
     elif category and amount > 0:
@@ -75,14 +75,16 @@ if not st.session_state.transactions.empty:
     else:
         st.info("Add some transactions to see the Expense vs Income chart.")
 
+    all_expense_categories = expense_categories.copy()
     expense_data = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]
-    if not expense_data.empty:
-        fig2, ax2 = plt.subplots()
-        ax2.bar(expense_data["Category"], expense_data["Amount"])
-        ax2.set_xlabel("Expense Category")
-        ax2.set_ylabel("Amount (₹)")
-        ax2.set_title("Category-wise Expenses")
-        st.pyplot(fig2)
+    expense_summary = expense_data.groupby("Category")["Amount"].sum().reindex(all_expense_categories, fill_value=0)
+
+    fig2, ax2 = plt.subplots()
+    ax2.bar(expense_summary.index, expense_summary.values)
+    ax2.set_xlabel("Expense Category")
+    ax2.set_ylabel("Amount (₹)")
+    ax2.set_title("Category-wise Expenses (Including Zero Spending)")
+    st.pyplot(fig2)
 
 st.header("Transaction History")
 st.dataframe(st.session_state.transactions)
