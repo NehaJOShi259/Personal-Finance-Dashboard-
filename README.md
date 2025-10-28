@@ -3,13 +3,13 @@
 **Personal Finance Tracker** is a simple yet functional web app built using **Python** and **Streamlit**.
 It helps you record, visualize, and manage your **income and expenses** effectively — all through an interactive web dashboard.
 
----
+
 
 ## 🌐 Live Demo
 
 👉 [Open Personal Finance Tracker](https://nehajoshi259-personal-finance-dashboar-finance-dashboard-u2wtzy.streamlit.app/)
 
----
+
 
 ## Features
 
@@ -29,7 +29,7 @@ It helps you record, visualize, and manage your **income and expenses** effectiv
   * **Income vs Expense Comparison (Bar Chart)**
 * All data is saved locally in a **CSV file** for persistence
 
----
+
 
 ## Technologies Used
 
@@ -38,7 +38,7 @@ It helps you record, visualize, and manage your **income and expenses** effectiv
 * **Pandas**
 * **Matplotlib**
 
----
+
 
 ## How to Run Locally
 
@@ -67,7 +67,7 @@ It helps you record, visualize, and manage your **income and expenses** effectiv
    http://localhost:8501
    ```
 
----
+
 
 ## App Logic Overview
 
@@ -79,7 +79,7 @@ It helps you record, visualize, and manage your **income and expenses** effectiv
   * Pie chart for category-wise spending distribution.
   * Bar chart comparing total income vs expenses.
 
----
+
 
 ## Example Usage
 
