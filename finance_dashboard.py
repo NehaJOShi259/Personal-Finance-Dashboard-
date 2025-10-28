@@ -16,7 +16,6 @@ else:
 
 amount = st.number_input("Amount", min_value=0.0, step=0.1)
 
-# Auto-handle description
 if transaction_type == "Income" and category == "Salary":
     st.text("Description: Salary Income (auto-filled)")
     description = "Salary Income"
@@ -25,8 +24,16 @@ else:
 
 date = st.date_input("Date")
 
+mismatch = False
+if transaction_type == "Income" and any(word.lower() in description.lower() for word in ["food", "travel", "transport", "bill", "entertainment"]):
+    mismatch = True
+elif transaction_type == "Expense" and any(word.lower() in description.lower() for word in ["salary", "income", "freelance", "investment"]):
+    mismatch = True
+
 if st.button("Add Transaction"):
-    if transaction_type == "Expense":
+    if mismatch:
+        st.error("Description does not match the selected transaction type or category.")
+    elif transaction_type == "Expense":
         total_income = st.session_state.transactions[st.session_state.transactions["Type"] == "Income"]["Amount"].sum()
         total_expense = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]["Amount"].sum()
         if total_income - total_expense < amount:
@@ -70,36 +77,13 @@ if not st.session_state.transactions.empty:
     st.write(f"Total Expense: ₹{expense}")
     st.write(f"Balance: ₹{balance}")
 
-    st.subheader("Category-wise Expense Distribution")
-    expense_data = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]
-
-    categories = ["Food", "Transport", "Bills", "Entertainment", "Other"]
-    category_sums = {cat: 0 for cat in categories}
-    for cat in expense_data["Category"].unique():
-        category_sums[cat] = expense_data[expense_data["Category"] == cat]["Amount"].sum()
-
-    if sum(category_sums.values()) > 0:
-        fig1, ax1 = plt.subplots()
-        ax1.pie(category_sums.values(), labels=category_sums.keys(), autopct="%1.1f%%")
-        st.pyplot(fig1)
-    else:
-        st.write("No expenses yet to visualize.")
-
-    st.subheader("Income vs Expense by Category")
-    income_data = st.session_state.transactions[st.session_state.transactions["Type"] == "Income"]
-
-    income_sums = {cat: 0 for cat in ["Salary", "Freelance", "Investment", "Other"]}
-    for cat in income_data["Category"].unique():
-        income_sums[cat] = income_data[income_data["Category"] == cat]["Amount"].sum()
-
-    df_bar = pd.DataFrame({
-        "Category": list(set(list(income_sums.keys()) + list(category_sums.keys()))),
-        "Income": [income_sums.get(cat, 0) for cat in set(income_sums.keys()).union(category_sums.keys())],
-        "Expense": [category_sums.get(cat, 0) for cat in set(income_sums.keys()).union(category_sums.keys())]
-    })
-
-    fig2, ax2 = plt.subplots()
-    df_bar.plot(x="Category", kind="bar", ax=ax2)
-    st.pyplot(fig2)
+    if income > 0 or expense > 0:
+        fig, ax = plt.subplots()
+        ax.bar(["Income", "Expense"], [income, expense], color=["green", "red"])
+        ax.set_title("Income vs Expense")
+        ax.set_ylabel("Amount (₹)")
+        for i, v in enumerate([income, expense]):
+            ax.text(i, v + 10, f"₹{v}", ha="center", fontweight="bold")
+        st.pyplot(fig)
 else:
     st.write("No transactions to display yet.")
