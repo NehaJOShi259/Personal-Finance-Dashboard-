@@ -41,21 +41,21 @@ if st.sidebar.button("Add Income"):
         st.warning("Amount must be greater than zero.")
 
 
-elif transaction_type == "Expense":
-if st.session_state.total_income <= 0:
-    st.warning("Please add income first before recording any expenses.")
-else:
-    expense_category = st.sidebar.selectbox(
-    "Category",
-    ["Food", "Transport", "Rent", "Shopping", "Bills", "Entertainment", "Other"]
-    )
+    elif transaction_type == "Expense":
+        if st.session_state.total_income <= 0:
+            st.warning("Please add income first before recording any expenses.")
+        else:
+            expense_category = st.sidebar.selectbox(
+            "Category",
+            ["Food", "Transport", "Rent", "Shopping", "Bills", "Entertainment", "Other"]
+            )
 if expense_category == "Other":
-    expense_category = st.sidebar.text_input("Enter Expense Category")
-    amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
-    desc = st.sidebar.text_area("Description")
-    date = st.sidebar.date_input("Date")
-
-    remaining_balance = st.session_state.total_income - st.session_state.total_expense
+        expense_category = st.sidebar.text_input("Enter Expense Category")
+        amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
+        desc = st.sidebar.text_area("Description")
+        date = st.sidebar.date_input("Date")
+    
+        remaining_balance = st.session_state.total_income - st.session_state.total_expense
 
     if st.sidebar.button("Add Expense"):
         if amount <= 0:
@@ -84,4 +84,5 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Total Income", f"₹{st.session_state.total_income:,.2f}")
 col2.metric("Total Expenses", f"₹{st.session_state.total_expense:,.2f}")
 col3.metric("Remaining Balance", f"₹{st.session_state.total_income - st.session_state.total_expense:,.2f}")
+
 
