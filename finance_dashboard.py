@@ -15,7 +15,14 @@ else:
     category = st.selectbox("Category", ["Food", "Transport", "Bills", "Entertainment", "Other"])
 
 amount = st.number_input("Amount", min_value=0.0, step=0.1)
-description = st.text_input("Description")
+
+# Auto-handle description
+if transaction_type == "Income" and category == "Salary":
+    st.text("Description: Salary Income (auto-filled)")
+    description = "Salary Income"
+else:
+    description = st.text_input("Description")
+
 date = st.date_input("Date")
 
 if st.button("Add Transaction"):
@@ -71,9 +78,12 @@ if not st.session_state.transactions.empty:
     for cat in expense_data["Category"].unique():
         category_sums[cat] = expense_data[expense_data["Category"] == cat]["Amount"].sum()
 
-    fig1, ax1 = plt.subplots()
-    ax1.pie(category_sums.values(), labels=category_sums.keys(), autopct="%1.1f%%")
-    st.pyplot(fig1)
+    if sum(category_sums.values()) > 0:
+        fig1, ax1 = plt.subplots()
+        ax1.pie(category_sums.values(), labels=category_sums.keys(), autopct="%1.1f%%")
+        st.pyplot(fig1)
+    else:
+        st.write("No expenses yet to visualize.")
 
     st.subheader("Income vs Expense by Category")
     income_data = st.session_state.transactions[st.session_state.transactions["Type"] == "Income"]
