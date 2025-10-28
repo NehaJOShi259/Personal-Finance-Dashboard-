@@ -8,11 +8,11 @@ st.title("Personal Finance Dashboard")
 # Initialize state
 
 if "transactions" not in st.session_state:
-st.session_state.transactions = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
+    st.session_state.transactions = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
 if "total_income" not in st.session_state:
-st.session_state.total_income = 0
+    st.session_state.total_income = 0
 if "total_expense" not in st.session_state:
-st.session_state.total_expense = 0
+    st.session_state.total_expense = 0
 
 # Sidebar input
 
@@ -75,3 +75,4 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Total Income", f"₹{st.session_state.total_income:,.2f}")
 col2.metric("Total Expenses", f"₹{st.session_state.total_expense:,.2f}")
 col3.metric("Remaining Balance", f"₹{st.session_state.total_income - st.session_state.total_expense:,.2f}")
+
