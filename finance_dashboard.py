@@ -23,9 +23,9 @@ if transaction_type == "Income":
     income_category = st.sidebar.selectbox("Source", ["Salary", "Freelancing", "Investment", "Gift", "Other"])
 if income_category == "Other":
     income_category = st.sidebar.text_input("Enter Income Source")
-    amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
-    desc = st.sidebar.text_area("Description")
-    date = st.sidebar.date_input("Date")
+amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
+desc = st.sidebar.text_area("Description")
+date = st.sidebar.date_input("Date")
 if st.sidebar.button("Add Income"):
     if amount > 0:
         new_data = pd.DataFrame([[transaction_type, income_category, amount, desc, date]],
@@ -72,6 +72,7 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Total Income", f"₹{st.session_state.total_income:,.2f}")
 col2.metric("Total Expenses", f"₹{st.session_state.total_expense:,.2f}")
 col3.metric("Remaining Balance", f"₹{st.session_state.total_income - st.session_state.total_expense:,.2f}")
+
 
 
 
