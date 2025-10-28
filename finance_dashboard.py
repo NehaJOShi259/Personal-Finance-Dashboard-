@@ -1,113 +1,96 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
-st.title("Personal Finance Tracker")
+# File to store data permanently
+DATA_FILE = "finance_data.csv"
 
-if "transactions" not in st.session_state:
-    st.session_state.transactions = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
-
-transaction_type = st.selectbox("Transaction Type", ["Income", "Expense"])
-
-if transaction_type == "Income":
-    category = st.selectbox("Category", ["Salary", "Freelance", "Investment", "Other"])
+# Load existing data
+if os.path.exists(DATA_FILE):
+    df = pd.read_csv(DATA_FILE)
 else:
-    category = st.selectbox("Category", ["Food", "Transport", "Bills", "Entertainment", "Other"])
+    df = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
 
-amount = st.number_input("Amount (₹)", min_value=0.0, step=0.1)
+st.title("💰 Income & Expense Tracker")
+
+# Input section
+st.subheader("Add Transaction")
+
+type_option = st.selectbox("Type", ["Income", "Expense"])
+category = st.text_input("Category")
+amount = st.number_input("Amount", min_value=0.0, format="%.2f")
 description = st.text_input("Description")
 date = st.date_input("Date")
 
-# Strict mismatch detection based on category
-mismatch = False
-desc_lower = description.lower()
+# Define mismatched keywords
+mismatch_rules = {
+    "Income": ["food", "bill", "travel", "transport"],
+    "Expense": ["salary", "bonus", "income"]
+}
 
-if transaction_type == "Income":
-    if category == "Salary" and any(w in desc_lower for w in ["food", "travel", "bill", "movie", "entertainment"]):
-        mismatch = True
-    elif category == "Freelance" and any(w in desc_lower for w in ["food", "transport", "bill", "salary"]):
-        mismatch = True
-    elif category == "Investment" and any(w in desc_lower for w in ["food", "travel", "rent", "bill"]):
-        mismatch = True
-else:
-    if category == "Food" and any(w in desc_lower for w in ["salary", "income", "investment"]):
-        mismatch = True
-    elif category == "Transport" and any(w in desc_lower for w in ["salary", "income", "investment", "food"]):
-        mismatch = True
-    elif category == "Bills" and any(w in desc_lower for w in ["salary", "income", "investment", "food", "transport"]):
-        mismatch = True
-    elif category == "Entertainment" and any(w in desc_lower for w in ["salary", "income", "investment", "food", "bill"]):
-        mismatch = True
+# Function to check mismatches
+def check_mismatch(type_option, description):
+    desc_words = description.lower().split()
+    for bad_word in mismatch_rules.get(type_option, []):
+        if bad_word in desc_words:
+            return True
+    return False
 
-if st.button("Add Transaction"):
-    if amount <= 0:
-        st.warning("Enter a valid amount.")
-    elif mismatch:
-        st.error("Description does not match the selected category.")
-    elif transaction_type == "Expense":
-        total_income = st.session_state.transactions[st.session_state.transactions["Type"] == "Income"]["Amount"].sum()
-        total_expense = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]["Amount"].sum()
-        if total_income - total_expense < amount:
-            st.warning("Insufficient balance. Add income first.")
-        else:
-            new_transaction = pd.DataFrame({
-                "Type": [transaction_type],
-                "Category": [category],
-                "Amount": [amount],
-                "Description": [description],
-                "Date": [date]
-            })
-            st.session_state.transactions = pd.concat([st.session_state.transactions, new_transaction], ignore_index=True)
-            st.success("Transaction added successfully.")
+# Add data
+if st.button("Add"):
+    if check_mismatch(type_option, description):
+        st.error(f"⚠️ Mismatch detected! '{description}' doesn't fit with {type_option}.")
     else:
-        new_transaction = pd.DataFrame({
-            "Type": [transaction_type],
+        new_entry = pd.DataFrame({
+            "Type": [type_option],
             "Category": [category],
             "Amount": [amount],
             "Description": [description],
             "Date": [date]
         })
-        st.session_state.transactions = pd.concat([st.session_state.transactions, new_transaction], ignore_index=True)
-        st.success("Transaction added successfully.")
+        df = pd.concat([df, new_entry], ignore_index=True)
+        df.to_csv(DATA_FILE, index=False)
+        st.success("✅ Entry added successfully!")
 
+# Show data
 st.subheader("All Transactions")
-st.dataframe(st.session_state.transactions)
+st.dataframe(df)
 
-if not st.session_state.transactions.empty:
-    delete_index = st.selectbox("Select transaction to delete", range(len(st.session_state.transactions)))
-    if st.button("Delete Transaction"):
-        st.session_state.transactions = st.session_state.transactions.drop(delete_index).reset_index(drop=True)
-        st.success("Transaction deleted successfully.")
+# --- PIE CHART FOR CATEGORY-WISE EXPENSES ---
+st.subheader("📊 Category-wise Expense Breakdown")
 
-st.subheader("Summary")
-if not st.session_state.transactions.empty:
-    income = st.session_state.transactions[st.session_state.transactions["Type"] == "Income"]["Amount"].sum()
-    expense = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]["Amount"].sum()
-    balance = income - expense
-    st.write(f"Total Income: ₹{income}")
-    st.write(f"Total Expense: ₹{expense}")
-    st.write(f"Balance: ₹{balance}")
-
-    # Pie chart for category-wise expenses only
-    expense_data = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]
-    if not expense_data.empty:
-        category_sums = expense_data.groupby("Category")["Amount"].sum()
-        category_sums = category_sums[category_sums > 0]
-        if not category_sums.empty:
-            fig, ax = plt.subplots()
-            ax.pie(category_sums, labels=category_sums.index, startangle=90)
-            ax.set_title("Category-wise Expense Distribution")
-            st.pyplot(fig)
+if not df.empty and "Expense" in df["Type"].values:
+    expense_df = df[df["Type"] == "Expense"]
+    if not expense_df.empty:
+        category_sum = expense_df.groupby("Category")["Amount"].sum()
+        fig, ax = plt.subplots()
+        wedges, texts, autotexts = ax.pie(
+            category_sum,
+            labels=category_sum.index,
+            autopct='%1.1f%%',
+            startangle=90,
+            textprops={'fontsize': 10}
+        )
+        plt.title("Expense Distribution by Category")
+        st.pyplot(fig)
     else:
-        st.info("No expenses yet to display pie chart.")
+        st.info("No expenses recorded yet.")
+else:
+    st.info("No data available to display.")
 
-    # Income vs Expense Bar chart
+# --- INCOME VS EXPENSE BAR CHART ---
+st.subheader("💸 Income vs Expense Comparison")
+
+if not df.empty:
+    summary = df.groupby("Type")["Amount"].sum().reindex(["Income", "Expense"], fill_value=0)
     fig2, ax2 = plt.subplots()
-    ax2.bar(["Income", "Expense"], [income, expense], color=["green", "red"])
-    ax2.set_title("Income vs Expense")
-    ax2.set_ylabel("Amount (₹)")
-    for i, v in enumerate([income, expense]):
-        ax2.text(i, v + 10, f"₹{v}", ha="center", fontweight="bold")
+    summary.plot(kind='bar', ax=ax2, color=['green', 'red'])
+    plt.title("Income vs Expense")
+    plt.xlabel("Type")
+    plt.ylabel("Amount")
+    for i, val in enumerate(summary):
+        ax2.text(i, val + 5, f"{val:.0f}", ha='center')
     st.pyplot(fig2)
 else:
-    st.write("No transactions to display yet.")
+    st.info("No transactions to show.")
