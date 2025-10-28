@@ -1,41 +1,86 @@
-# Personal Finance Dashboard (Python Streamlit)
+# Personal Finance Tracker (Python Streamlit)
 
-This is a simple and interactive personal finance dashboard built in Python using Streamlit.  
-It allows you to:
+**Personal Finance Tracker** is a simple yet functional web app built using **Python** and **Streamlit**.
+It allows users to record, visualize, and manage their income and expenses in a clean and efficient way.
 
-- Add transactions with **Date, Category, Type (Income/Expense), and Amount**  
-- View a **table of all transactions**  
-- See **summary metrics**: Total Income, Total Expenses, Balance  
-- Visualize data with **bar chart, pie chart, and line chart**  
-- Download all transactions as a CSV file  
+---
 
-🚀 Features
+## Features
 
-- Add / View Transactions  
-- Summary Metrics  
-- Bar Chart & Pie Chart for Expenses  
-- Line Chart: Income vs Expenses Over Time  
-- Persistent CSV storage  
+* Add transactions with **Date, Type (Income/Expense), Category, Amount, and Description**
+* Prevent invalid or mismatched entries (e.g., writing “food” under salary)
+* Block expenses if balance is insufficient
+* Automatically calculate **Total Income**, **Total Expenses**, and **Remaining Balance**
+* View and manage transaction history
+* Delete specific entries or clear all data
+* Visualize:
 
-📦 Technologies Used
+  * **Category-wise Expense Distribution (Pie Chart)**
+  * **Income vs Expense Comparison (Bar Chart)**
+* Data persists using a local **CSV file**
 
-- Python 3.x  
-- Streamlit  
-- Pandas  
-- Matplotlib  
+---
 
-🧪 Live Demo
+## Technologies Used
 
-[View Live Dashboard](https://nehajoshi259-personal-finance-dashboar-finance-dashboard-u2wtzy.streamlit.app/)
+* **Python 3.x**
+* **Streamlit**
+* **Pandas**
+* **Matplotlib**
 
-📄 How to Run Locally
+---
 
-Clone the repository:
+## How to Run Locally
 
-```bash
-git clone https://github.com/NehaJOShi259/finance-dashboard.git
-cd finance-dashboard
+1. Clone this repository:
 
-python -m pip install -r requirements.txt
+   ```bash
+   git clone https://github.com/NehaJOShi259/Personal-Finance-Dashboard-.git
+   cd Personal-Finance-Dashboard-
+   ```
 
-python -m streamlit run finance_dashboard.py
+2. Install dependencies:
+
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+
+3. Run the Streamlit app:
+
+   ```bash
+   python -m streamlit run finance_dashboard.py
+   ```
+
+4. The dashboard will open automatically in your default browser:
+
+   ```
+   http://localhost:8501
+   ```
+
+---
+
+## App Logic Overview
+
+* **Income Validation:** Prevents adding expenses before adding income.
+* **Description Validation:** Checks for mismatched keywords (e.g., “food” can’t appear in an income entry).
+* **Balance Control:** Ensures no expense exceeds the available balance.
+* **Visualization:**
+
+  * Pie chart shows spending distribution by category.
+  * Bar chart compares total income vs total expenses.
+
+---
+
+## Example Workflow
+
+1. Add your **Salary** as income.
+2. Record expenses like **Food**, **Transport**, or **Shopping**.
+3. If you try to spend more than your available balance, the app alerts you.
+4. View clear visuals and transaction history to understand your spending.
+
+---
+
+## License
+
+This project is open-source and available for educational or personal use.
+Developed and maintained by **Neha Joshi**.
