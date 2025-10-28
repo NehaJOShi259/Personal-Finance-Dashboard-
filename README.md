@@ -78,9 +78,3 @@ It allows users to record, visualize, and manage their income and expenses in a 
 3. If you try to spend more than your available balance, the app alerts you.
 4. View clear visuals and transaction history to understand your spending.
 
----
-
-## License
-
-This project is open-source and available for educational or personal use.
-Developed and maintained by **Neha Joshi**.
