@@ -27,23 +27,26 @@ amount = st.number_input("Amount", min_value=0.0, format="%.2f")
 description = st.text_input("Description")
 date = st.date_input("Date")
 
-mismatch_rules = {
-    "Income": ["food", "bill", "travel", "transport", "shopping"],
-    "Expense": ["salary", "bonus", "income", "investment"]
-}
+income_related_words = ["salary", "bonus", "pay", "investment", "profit", "interest", "income"]
+expense_related_words = ["food", "bill", "travel", "transport", "rent", "shopping", "grocery", "movie", "fun"]
 
 def check_mismatch(type_option, description):
-    desc_words = description.lower().split()
-    for bad_word in mismatch_rules.get(type_option, []):
-        if bad_word in desc_words:
-            return True
+    desc = description.lower()
+    if type_option == "Income":
+        for word in expense_related_words:
+            if word in desc:
+                return True
+    elif type_option == "Expense":
+        for word in income_related_words:
+            if word in desc:
+                return True
     return False
 
 if st.button("Add"):
     if amount <= 0:
         st.error("Amount must be greater than zero.")
     elif check_mismatch(type_option, description):
-        st.error(f"Invalid entry: '{description}' doesn't match with {type_option}.")
+        st.error(f"'{description}' does not match with {type_option}. Please correct it.")
     else:
         new_entry = pd.DataFrame({
             "Type": [type_option],
