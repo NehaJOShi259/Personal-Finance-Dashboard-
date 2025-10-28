@@ -1,88 +1,46 @@
 import streamlit as st
 import pandas as pd
-
-st.set_page_config(page_title="Personal Finance Dashboard", layout="wide")
-
-st.cache_data.clear()
-st.cache_resource.clear()
-
-st.title("Personal Finance Dashboard")
+from datetime import date
 
 if "transactions" not in st.session_state:
     st.session_state.transactions = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
-if "total_income" not in st.session_state:
-    st.session_state.total_income = 0.0
-if "total_expense" not in st.session_state:
-    st.session_state.total_expense = 0.0
 
-st.sidebar.header("Add Transaction")
-transaction_type = st.sidebar.selectbox("Type", ["Income", "Expense"])
+st.title("Personal Finance Tracker")
 
-if transaction_type == "Income":
-    income_category = st.sidebar.selectbox("Source", ["Salary", "Freelancing", "Investment", "Gift", "Other"])
-if income_category == "Other":
-    income_category = st.sidebar.text_input("Enter Income Source")
-    amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
-    desc = st.sidebar.text_area("Description")
-    date = st.sidebar.date_input("Date")
+st.header("Add a Transaction")
 
-if st.sidebar.button("Add Income"):
-    if amount > 0:
-        new_data = pd.DataFrame(
-            [[transaction_type, income_category, amount, desc, date]],
-            columns=["Type", "Category", "Amount", "Description", "Date"]
-        )
+transaction_type = st.selectbox("Select Transaction Type", ["Income", "Expense"])
+category = st.text_input("Category (e.g. Salary, Food, Rent, etc.)")
+amount = st.number_input("Amount", min_value=0.0, format="%.2f")
+description = st.text_input("Description")
+transaction_date = st.date_input("Date", value=date.today())
+
+if st.button("Add Transaction"):
+    if category and amount > 0:
+        new_transaction = pd.DataFrame({
+            "Type": [transaction_type],
+            "Category": [category],
+            "Amount": [amount],
+            "Description": [description],
+            "Date": [transaction_date]
+        })
         st.session_state.transactions = pd.concat(
-            [st.session_state.transactions, new_data], ignore_index=True
+            [st.session_state.transactions, new_transaction],
+            ignore_index=True
         )
-        st.session_state.total_income += amount
-        st.success("Income added successfully.")
+        st.success("Transaction added successfully.")
     else:
-        st.warning("Amount must be greater than zero.")
-
-
-    elif transaction_type == "Expense":
-        if st.session_state.total_income <= 0:
-            st.warning("Please add income first before recording any expenses.")
-        else:
-            expense_category = st.sidebar.selectbox(
-            "Category",
-            ["Food", "Transport", "Rent", "Shopping", "Bills", "Entertainment", "Other"]
-            )
-if expense_category == "Other":
-        expense_category = st.sidebar.text_input("Enter Expense Category")
-        amount = st.sidebar.number_input("Amount (₹)", min_value=0.0, step=100.0)
-        desc = st.sidebar.text_area("Description")
-        date = st.sidebar.date_input("Date")
-    
-        remaining_balance = st.session_state.total_income - st.session_state.total_expense
-
-    if st.sidebar.button("Add Expense"):
-        if amount <= 0:
-            st.warning("Amount must be greater than zero.")
-        elif remaining_balance < amount:
-            st.error("Insufficient balance. Please add more income first.")
-        else:
-            new_data = pd.DataFrame(
-                [[transaction_type, expense_category, amount, desc, date]],
-                columns=["Type", "Category", "Amount", "Description", "Date"]
-            )
-            st.session_state.transactions = pd.concat(
-                [st.session_state.transactions, new_data], ignore_index=True
-            )
-            st.session_state.total_expense += amount
-            st.success("Expense added successfully.")
-
-st.header("Transaction History")
-if st.session_state.transactions.empty:
-    st.info("No transactions yet. Add income or expense to begin.")
-else:
-    st.dataframe(st.session_state.transactions, use_container_width=True)
+        st.warning("Please enter all fields correctly.")
 
 st.header("Summary")
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Income", f"₹{st.session_state.total_income:,.2f}")
-col2.metric("Total Expenses", f"₹{st.session_state.total_expense:,.2f}")
-col3.metric("Remaining Balance", f"₹{st.session_state.total_income - st.session_state.total_expense:,.2f}")
 
+income_total = st.session_state.transactions[st.session_state.transactions["Type"] == "Income"]["Amount"].sum()
+expense_total = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]["Amount"].sum()
+balance = income_total - expense_total
 
+st.write(f"**Total Income:** ₹{income_total:.2f}")
+st.write(f"**Total Expenses:** ₹{expense_total:.2f}")
+st.write(f"**Current Balance:** ₹{balance:.2f}")
+
+st.header("Transaction History")
+st.dataframe(st.session_state.transactions)
