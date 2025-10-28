@@ -1,127 +1,106 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
+import tkinter as tk
+from tkinter import ttk, messagebox
+from rapidfuzz import process, fuzz
 
-DATA_FILE = "finance_data.csv"
+# -------------------- CATEGORY DATA --------------------
+categories = {
+    "Income": ["Salary", "Bonus", "Gift", "Investment Return"],
+    "Expense": ["Food", "Bills", "Rent", "Shopping", "Travel", "Mutual Fund"]
+}
 
-if os.path.exists(DATA_FILE):
-    df = pd.read_csv(DATA_FILE)
-else:
-    df = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
+transactions = []
 
-st.title("Personal Finance Tracker")
-
-income_categories = ["Salary", "Bonus", "Investment", "Other"]
-expense_categories = ["Food", "Transport", "Bills", "Entertainment", "Shopping", "Other"]
-
-st.subheader("Add Transaction")
-
-transaction_type = st.selectbox("Type", ["Income", "Expense"])
-if transaction_type == "Income":
-    category = st.selectbox("Category", income_categories)
-else:
-    category = st.selectbox("Category", expense_categories)
-
-amount = st.number_input("Amount (₹)", min_value=0.0, format="%.2f")
-description = st.text_input("Description")
-date = st.date_input("Date")
-
-income_words = ["salary", "bonus", "pay", "investment", "profit", "interest", "income"]
-expense_words = ["food", "bill", "travel", "transport", "rent", "shopping", "grocery", "movie", "fun"]
-
-def detect_mismatch(transaction_type, description):
-    text = description.lower()
-    if transaction_type == "Income":
-        for w in expense_words:
-            if w in text:
-                return w
-    elif transaction_type == "Expense":
-        for w in income_words:
-            if w in text:
-                return w
-    return None
-
-if st.button("Add Transaction"):
-    mismatch_word = detect_mismatch(transaction_type, description)
-    total_income = df[df["Type"] == "Income"]["Amount"].sum()
-    total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
-    remaining_balance = total_income - total_expense
-
-    if amount <= 0:
-        st.error("Amount must be greater than zero.")
-    elif mismatch_word:
-        st.error(f"The word '{mismatch_word}' does not match with {transaction_type}. Please correct it.")
-    elif transaction_type == "Expense" and remaining_balance < amount:
-        st.error("Insufficient balance. Add income before spending.")
+# -------------------- MATCH CATEGORY FUNCTION --------------------
+def match_category(user_input):
+    all_items = [item for sublist in categories.values() for item in sublist]
+    best_match = process.extractOne(user_input, all_items, scorer=fuzz.partial_ratio)
+    if best_match and best_match[1] > 70:
+        return best_match[0]
     else:
-        new_entry = pd.DataFrame({
-            "Type": [transaction_type],
-            "Category": [category],
-            "Amount": [amount],
-            "Description": [description],
-            "Date": [date]
+        return None
+
+# -------------------- ADD TRANSACTION FUNCTION --------------------
+def add_transaction():
+    category_type = category_type_var.get()
+    category = category_var.get()
+    amount = amount_entry.get().strip()
+
+    if not amount.isdigit():
+        messagebox.showerror("Error", "Please enter a valid amount.")
+        return
+
+    amount = float(amount)
+    matched = match_category(category)
+
+    if matched:
+        transactions.append({
+            "type": category_type,
+            "category": matched,
+            "amount": amount
         })
-        df = pd.concat([df, new_entry], ignore_index=True)
-        df.to_csv(DATA_FILE, index=False)
-        st.success("Transaction added successfully.")
-
-st.subheader("Transaction History")
-st.dataframe(df)
-
-total_income = df[df["Type"] == "Income"]["Amount"].sum()
-total_expense = df[df["Type"] == "Expense"]["Amount"].sum()
-balance = total_income - total_expense
-
-st.markdown(f"**Total Income:** ₹{total_income:.2f}")
-st.markdown(f"**Total Expenses:** ₹{total_expense:.2f}")
-st.markdown(f"**Remaining Balance:** ₹{balance:.2f}")
-
-st.subheader("Delete or Clear Data")
-delete_index = st.number_input("Enter row number to delete", min_value=0, step=1, format="%d")
-if st.button("Delete Entry"):
-    if 0 <= delete_index < len(df):
-        df = df.drop(delete_index).reset_index(drop=True)
-        df.to_csv(DATA_FILE, index=False)
-        st.success("Entry deleted.")
+        messagebox.showinfo("Added", f"{category_type} - {matched}: ₹{amount} added successfully.")
     else:
-        st.error("Invalid row number.")
+        messagebox.showwarning("Mismatch", f"'{category}' not found in categories. Please check spelling.")
 
-if st.button("Clear All Data"):
-    df = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
-    df.to_csv(DATA_FILE, index=False)
-    st.success("All data cleared.")
+    amount_entry.delete(0, tk.END)
+    category_var.set("")
 
-st.subheader("Expense Breakdown by Category")
-if not df.empty:
-    expense_df = df[df["Type"] == "Expense"]
-    if not expense_df.empty:
-        category_sum = expense_df.groupby("Category")["Amount"].sum()
-        fig1, ax1 = plt.subplots()
-        wedges, texts, autotexts = ax1.pie(
-            category_sum,
-            labels=category_sum.index,
-            autopct=lambda p: f"{p:.1f}%" if p > 0 else "",
-            startangle=90,
-            textprops={'fontsize': 10}
-        )
-        plt.title("Expense Distribution (%)")
-        st.pyplot(fig1)
-    else:
-        st.info("No expense data available.")
-else:
-    st.info("No transactions yet.")
+    update_summary()
 
-st.subheader("Income vs Expense")
-if not df.empty:
-    summary = df.groupby("Type")["Amount"].sum().reindex(["Income", "Expense"], fill_value=0)
-    fig2, ax2 = plt.subplots()
-    summary.plot(kind='bar', ax=ax2, color=['green', 'red'])
-    plt.title("Income vs Expense Comparison")
-    plt.xlabel("Type")
-    plt.ylabel("Amount (₹)")
-    for i, val in enumerate(summary):
-        ax2.text(i, val + 5, f"{val:.0f}", ha='center')
-    st.pyplot(fig2)
-else:
-    st.info("No data to compare.")
+# -------------------- UPDATE SUMMARY FUNCTION --------------------
+def update_summary():
+    total_income = sum(t["amount"] for t in transactions if t["type"] == "Income")
+    total_expense = sum(t["amount"] for t in transactions if t["type"] == "Expense")
+    balance = total_income - total_expense
+
+    income_label.config(text=f"Total Income: ₹{total_income}")
+    expense_label.config(text=f"Total Expense: ₹{total_expense}")
+    balance_label.config(text=f"Balance: ₹{balance}")
+
+# -------------------- UI SETUP --------------------
+root = tk.Tk()
+root.title("Smart Expense Tracker")
+root.geometry("400x450")
+root.config(bg="#f3f3f3")
+
+tk.Label(root, text="Smart Expense Tracker", font=("Arial", 16, "bold"), bg="#f3f3f3").pack(pady=10)
+
+# Category Type (Income/Expense)
+category_type_var = tk.StringVar()
+tk.Label(root, text="Select Type:", bg="#f3f3f3").pack()
+type_dropdown = ttk.Combobox(root, textvariable=category_type_var, values=["Income", "Expense"], state="readonly")
+type_dropdown.pack(pady=5)
+type_dropdown.current(0)
+
+# Category Dropdown
+category_var = tk.StringVar()
+tk.Label(root, text="Select or Enter Category:", bg="#f3f3f3").pack()
+category_dropdown = ttk.Combobox(root, textvariable=category_var)
+category_dropdown.pack(pady=5)
+
+def update_category_dropdown(event):
+    selected_type = category_type_var.get()
+    category_dropdown["values"] = categories.get(selected_type, [])
+type_dropdown.bind("<<ComboboxSelected>>", update_category_dropdown)
+update_category_dropdown(None)
+
+# Amount Entry
+tk.Label(root, text="Enter Amount (₹):", bg="#f3f3f3").pack()
+amount_entry = tk.Entry(root)
+amount_entry.pack(pady=5)
+
+# Add Button
+tk.Button(root, text="Add Transaction", command=add_transaction, bg="#4CAF50", fg="white", width=20).pack(pady=10)
+
+# Summary Section
+summary_frame = tk.Frame(root, bg="#f3f3f3")
+summary_frame.pack(pady=15)
+
+income_label = tk.Label(summary_frame, text="Total Income: ₹0", bg="#f3f3f3", font=("Arial", 12))
+income_label.pack()
+expense_label = tk.Label(summary_frame, text="Total Expense: ₹0", bg="#f3f3f3", font=("Arial", 12))
+expense_label.pack()
+balance_label = tk.Label(summary_frame, text="Balance: ₹0", bg="#f3f3f3", font=("Arial", 12, "bold"))
+balance_label.pack()
+
+root.mainloop()
