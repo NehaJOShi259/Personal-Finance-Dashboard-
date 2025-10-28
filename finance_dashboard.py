@@ -35,9 +35,9 @@ balance = income_total - expense_total
 
 if st.button("Add Transaction"):
     if transaction_type == "Expense" and income_total == 0:
-        st.error("You cannot add an expense before adding income.")
+        st.error("Add income before recording an expense.")
     elif transaction_type == "Expense" and amount > balance:
-        st.error("Insufficient balance. Add more income before spending.")
+        st.error("Insufficient balance. You cannot spend more than your available amount.")
     elif category and amount > 0:
         new_transaction = pd.DataFrame({
             "Type": [transaction_type],
@@ -52,7 +52,7 @@ if st.button("Add Transaction"):
         )
         st.success("Transaction added successfully.")
     else:
-        st.warning("Please enter all fields correctly.")
+        st.warning("Please fill in all fields correctly.")
 
 st.header("Summary")
 
@@ -62,14 +62,18 @@ st.write(f"Current Balance: ₹{balance:.2f}")
 
 if not st.session_state.transactions.empty:
     st.header("Visual Analysis")
-    data_summary = pd.DataFrame({
-        "Type": ["Income", "Expense"],
-        "Amount": [income_total, expense_total]
-    })
-    fig1, ax1 = plt.subplots()
-    ax1.pie(data_summary["Amount"], labels=data_summary["Type"], autopct="%1.1f%%", startangle=90)
-    ax1.axis("equal")
-    st.pyplot(fig1)
+
+    if income_total + expense_total > 0:
+        data_summary = pd.DataFrame({
+            "Type": ["Income", "Expense"],
+            "Amount": [income_total, expense_total]
+        })
+        fig1, ax1 = plt.subplots()
+        ax1.pie(data_summary["Amount"], labels=data_summary["Type"], autopct="%1.1f%%", startangle=90)
+        ax1.axis("equal")
+        st.pyplot(fig1)
+    else:
+        st.info("Add some transactions to see the Expense vs Income chart.")
 
     expense_data = st.session_state.transactions[st.session_state.transactions["Type"] == "Expense"]
     if not expense_data.empty:
