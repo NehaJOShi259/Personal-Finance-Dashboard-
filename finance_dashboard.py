@@ -35,7 +35,7 @@ if st.sidebar.button("Add Income"):
         st.success("Income added successfully.")
     else:
         st.warning("Amount must be greater than zero.")
-```
+
 
 else:
 expense_category = st.sidebar.selectbox("Category", ["Food", "Transport", "Rent", "Shopping", "Bills", "Entertainment", "Other"])
@@ -45,7 +45,6 @@ if expense_category == "Other":
     desc = st.sidebar.text_area("Description")
     date = st.sidebar.date_input("Date")
 
-```
 remaining_balance = st.session_state.total_income - st.session_state.total_expense
 
 if st.sidebar.button("Add Expense"):
@@ -59,7 +58,7 @@ if st.sidebar.button("Add Expense"):
         st.session_state.transactions = pd.concat([st.session_state.transactions, new_data], ignore_index=True)
         st.session_state.total_expense += amount
         st.success("Expense added successfully.")
-```
+
 
 # Transaction table
 
@@ -73,6 +72,7 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Total Income", f"₹{st.session_state.total_income:,.2f}")
 col2.metric("Total Expenses", f"₹{st.session_state.total_expense:,.2f}")
 col3.metric("Remaining Balance", f"₹{st.session_state.total_income - st.session_state.total_expense:,.2f}")
+
 
 
 
