@@ -3,33 +3,35 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-# File to store data permanently
 DATA_FILE = "finance_data.csv"
 
-# Load existing data
 if os.path.exists(DATA_FILE):
     df = pd.read_csv(DATA_FILE)
 else:
     df = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
 
-st.title("💰 Income & Expense Tracker")
+st.title("Income and Expense Tracker")
 
-# Input section
-st.subheader("Add Transaction")
+income_categories = ["Salary", "Bonus", "Investment", "Other"]
+expense_categories = ["Food", "Transport", "Bills", "Entertainment", "Shopping", "Other"]
+
+st.subheader("Add New Transaction")
 
 type_option = st.selectbox("Type", ["Income", "Expense"])
-category = st.text_input("Category")
+if type_option == "Income":
+    category = st.selectbox("Category", income_categories)
+else:
+    category = st.selectbox("Category", expense_categories)
+
 amount = st.number_input("Amount", min_value=0.0, format="%.2f")
 description = st.text_input("Description")
 date = st.date_input("Date")
 
-# Define mismatched keywords
 mismatch_rules = {
-    "Income": ["food", "bill", "travel", "transport"],
-    "Expense": ["salary", "bonus", "income"]
+    "Income": ["food", "bill", "travel", "transport", "shopping"],
+    "Expense": ["salary", "bonus", "income", "investment"]
 }
 
-# Function to check mismatches
 def check_mismatch(type_option, description):
     desc_words = description.lower().split()
     for bad_word in mismatch_rules.get(type_option, []):
@@ -37,10 +39,11 @@ def check_mismatch(type_option, description):
             return True
     return False
 
-# Add data
 if st.button("Add"):
-    if check_mismatch(type_option, description):
-        st.error(f"⚠️ Mismatch detected! '{description}' doesn't fit with {type_option}.")
+    if amount <= 0:
+        st.error("Amount must be greater than zero.")
+    elif check_mismatch(type_option, description):
+        st.error(f"Invalid entry: '{description}' doesn't match with {type_option}.")
     else:
         new_entry = pd.DataFrame({
             "Type": [type_option],
@@ -51,16 +54,27 @@ if st.button("Add"):
         })
         df = pd.concat([df, new_entry], ignore_index=True)
         df.to_csv(DATA_FILE, index=False)
-        st.success("✅ Entry added successfully!")
+        st.success("Entry added successfully.")
 
-# Show data
 st.subheader("All Transactions")
 st.dataframe(df)
 
-# --- PIE CHART FOR CATEGORY-WISE EXPENSES ---
-st.subheader("📊 Category-wise Expense Breakdown")
+delete_index = st.number_input("Enter row number to delete", min_value=0, step=1, format="%d")
+if st.button("Delete Entry"):
+    if 0 <= delete_index < len(df):
+        df = df.drop(delete_index).reset_index(drop=True)
+        df.to_csv(DATA_FILE, index=False)
+        st.success("Entry deleted.")
+    else:
+        st.error("Invalid row number.")
 
-if not df.empty and "Expense" in df["Type"].values:
+if st.button("Clear All Data"):
+    df = pd.DataFrame(columns=["Type", "Category", "Amount", "Description", "Date"])
+    df.to_csv(DATA_FILE, index=False)
+    st.success("All data cleared.")
+
+st.subheader("Category-wise Expense Breakdown")
+if not df.empty:
     expense_df = df[df["Type"] == "Expense"]
     if not expense_df.empty:
         category_sum = expense_df.groupby("Category")["Amount"].sum()
@@ -75,13 +89,11 @@ if not df.empty and "Expense" in df["Type"].values:
         plt.title("Expense Distribution by Category")
         st.pyplot(fig)
     else:
-        st.info("No expenses recorded yet.")
+        st.info("No expenses recorded.")
 else:
-    st.info("No data available to display.")
+    st.info("No data available.")
 
-# --- INCOME VS EXPENSE BAR CHART ---
-st.subheader("💸 Income vs Expense Comparison")
-
+st.subheader("Income vs Expense Comparison")
 if not df.empty:
     summary = df.groupby("Type")["Amount"].sum().reindex(["Income", "Expense"], fill_value=0)
     fig2, ax2 = plt.subplots()
